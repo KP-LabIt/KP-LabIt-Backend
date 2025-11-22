@@ -6,5 +6,5 @@ class Test(models.Model):
     meno = models.CharField(max_length=50)
     body = models.IntegerField()
 
-    def __strin__(self):
+    def __str__(self):
         return self.meno
