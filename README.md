@@ -24,19 +24,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. vytvorenie lokalnej db:
+3. pripojenie do db:
 
-Windows:
-
-```bash
-python manage.py migrate
-```
-
-Mac:
-
-```bash
-python3 manage.py migrate
-```
+v priečinku app/settings.py si vytvore .env súbor, kde vložíte db údaje, ktoré som posielal
 
 4. spustenie django appky:
 
