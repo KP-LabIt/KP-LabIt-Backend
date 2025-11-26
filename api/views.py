@@ -6,14 +6,14 @@ from .serializer import TestSerializer
 
 
 
-# tento endpoint vráti všetky údaje, ktoré su v Test tabulke.
+# tento endpoint vráti všetky obejkty, ktoré su v Test tabulke.
 @api_view(["GET"])
 def get_data(request):
     data = Test.objects.all()
     serialized_data = TestSerializer(data, many=True).data
     return Response(serialized_data)
 
-# tento endpoint vytvorí nový záznam v Table tabuľke, ak sú správne údaje valid.
+# tento endpoint vytvorí nový obejkt v Test tabuľke, ak sú správne údaje valid(očakava sa meno a body).
 @api_view(["POST"])
 def post_test(request):
     data = request.data
