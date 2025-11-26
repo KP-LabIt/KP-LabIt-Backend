@@ -28,10 +28,9 @@ pip install -r requirements.txt
 
 - v priečinku app si vytvore .env súbor, kde vložíte db údaje, ktoré som posielal.
 - ako dalej sa odporuca vygenerovat vlastny django SECRET_KEY, aby sa predislo warningom typu “Session data corrupted” (Produkčný server bude používať jeden stály SECRET_KEY, ktorý sa lokálne nepoužíva a nikdy sa nezdieľa.).
-- na vygenerovanie SECRET_KEY:
+- na vygenerovanie SECRET_KEY (POZOR, treba byt v django shell pomocou commandu -> python manage.py shell):
 
   ```bash
-      python manage.py shell
       from django.core.management.utils import get_random_secret_key
       get_random_secret_key()
   ```
