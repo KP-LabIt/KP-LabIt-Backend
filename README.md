@@ -26,7 +26,7 @@ pip install -r requirements.txt
 
 3. pripojenie do db:
 
-v priečinku app/settings.py si vytvore .env súbor, kde vložíte db údaje, ktoré som posielal
+v priečinku app/settings.py si vytvore .env súbor, kde vložíte db údaje, ktoré som posielal.
 
 4. spustenie django appky:
 
