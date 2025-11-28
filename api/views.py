@@ -30,4 +30,7 @@ def post_test(request):
 # default endpoint, nepotrebny, iba na testovanie.
 @api_view(["GET"])
 def get_init(request):
-    return Response("Endpoint pre api...")
+    return Response("Endpoint pre api...") 
+
+# test
+
