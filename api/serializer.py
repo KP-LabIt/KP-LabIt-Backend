@@ -1,9 +1,25 @@
 from rest_framework import serializers
-from .models import Test
+from .models import Activity, ActivitySlot, Reservation
 
 # na konvertnutie json dat do django modelu a naopak cca
 
-class TestSerializer(serializers.ModelSerializer):
+class ActivitySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Test
+        model = Activity
         fields = "__all__"
+
+class ActivitySlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ActivitySlot
+        fields = "__all__"
+
+class ReservationSerializer(serializers.ModelSerializer):
+    status_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Reservation
+        fields = ["id", "user", "activity_slot", "note", "created_at", "status", "status_label"]
+        read_only_fields = ["id", "created_at"]
+
+    def get_status_label(self, obj):
+        return obj.get_status_display()
