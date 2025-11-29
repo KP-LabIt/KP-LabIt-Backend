@@ -6,6 +6,8 @@ from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Test
 from .serializer import TestSerializer
+
+
 # tento JWT login endpoint: POST /api/login/ s {"email", "password"} vráti JWT s firstName, lastName, role
 @api_view(["POST"])
 def login(request):
@@ -19,7 +21,7 @@ def login(request):
     except User.DoesNotExist:
         return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
 
-    user_auth = authenticate(username=user.username, password=password)
+    user_auth = authenticate(email=email, password=password)
     if user_auth is None:
         return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -65,4 +67,4 @@ def post_test(request):
 def get_init(request):
     return Response("Endpoint pre api...") 
 
-
+#...
