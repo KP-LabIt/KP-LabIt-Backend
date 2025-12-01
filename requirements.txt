@@ -6,3 +6,4 @@ python-dotenv
 djangorestframework-simplejwt
 Pillow
 django-environ
+djoser

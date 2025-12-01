@@ -55,7 +55,22 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "accounts",
+    "djoser",
 ]
+
+DJOSER = {
+    "LOGIN_FIELD": "email",
+    "PASSWORD_RESET_CONFIRM_URL": "reset_password/{uid}/{token}",  
+    "SEND_ACTIVATION_EMAIL": False,
+    "PASSWORD_RESET_CONFIRM_RETYPE": False,
+    "PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND": True
+}
+
+
+# ZATIAL IBA NA TESTOVANIE, MAILY SA POSIELAJU DO KONZOLY, POTOM PRIDAŤ POSIELANIE MAILOV CEZ MAILGUN
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "noreply@example.com"
+
 
 
 MIDDLEWARE = [
