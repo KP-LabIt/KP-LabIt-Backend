@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import get_init, login, change_password
+from .views import get_init, login, change_password, CustomUserViewSet
 from djoser.views import UserViewSet
 
 urlpatterns = [
@@ -14,5 +14,5 @@ urlpatterns = [
     # reset_password_confirm endpoint očakáva uid, token a nové heslo( Payload: { "uid": "...", "token": "...", "new_password": "..." } ). keď je uid a token valid, tak sa uloží nové heslo.
     # Cielom tohto je, aby si mohli studenti zmenit heslo, lebo teraz tam maju v podstate placeholder heslo, a aby sa neposielal kazdemu mail s jeho heslom, tak staci, aby si klikol na ten odkaz, vyplnil jeho mail, na maile sa mu to otvori, zmeni heslo a hotovo. ked bude prihlaseny, tak si kludne vie stale zmenit heslo v jeho profile.
     path("reset_password/", UserViewSet.as_view({"post": "reset_password"}), name="reset_password"),
-    path("reset_password_confirm/", UserViewSet.as_view({"post": "reset_password_confirm"}), name="reset_password_confirm"),
+    path("reset_password_confirm/", CustomUserViewSet.as_view({"post": "reset_password_confirm"}), name="reset_password_confirm"),
 ]

@@ -6,6 +6,9 @@ from .serializer import UserSerializer, RoleSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
+from djoser.views import UserViewSet
+from rest_framework.decorators import action
+from django.utils.timezone import now
 
 # view pre veci ohladne usera/accounts
 @api_view(["POST"])
@@ -64,6 +67,28 @@ def login(request):
         "token": jwt_token,
         "must_change_password": user.must_change_password
     })
+
+
+# prepisanie djoser reset_password_confirm view (logika je taká istá, ako v oficialnom github repe tejto knižnice, iba pridavam zmenu polia must_change_password
+# ešte som zakomentoval podmienku, kde kontroluje, či mam v settings "PASSWORD_CHANGED_EMAIL_CONFIRMATION", lebo ju nemáme (ak by sme mali, tak by poslal mail po zmene hesla) a vyhadzoval server error(pri importovani tohto default view to ignorovalo nejako))
+class CustomUserViewSet(UserViewSet):
+    @action(["post"], detail=False)
+    def reset_password_confirm(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.user.set_password(serializer.data["new_password"])
+        serializer.user.must_change_password = False
+        if hasattr(serializer.user, "last_login"):
+            serializer.user.last_login = now()
+        serializer.user.save()
+
+        # if settings.PASSWORD_CHANGED_EMAIL_CONFIRMATION:
+        #   context = {"user": serializer.user}
+        #    to = [get_user_email(serializer.user)]
+        #    settings.EMAIL.password_changed_confirmation(self.request, context).send(to)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(["GET"])
 def get_init(request):
