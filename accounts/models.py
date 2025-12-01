@@ -19,6 +19,8 @@ class User(AbstractUser):
     role = models.ForeignKey(Role, on_delete=models.CASCADE, default=get_default_role)
     email = models.EmailField(blank=False, unique=True)
 
+    must_change_password = models.BooleanField(default=True, help_text="User must change password on first login.")
+
     REQUIRED_FIELDS = ["email"]
 
 
