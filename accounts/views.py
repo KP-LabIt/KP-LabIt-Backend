@@ -146,6 +146,7 @@ class CustomUserViewSet(UserViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticatedWithValidToken])
 def get_init(request):
