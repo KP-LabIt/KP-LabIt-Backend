@@ -46,7 +46,7 @@ REST_FRAMEWORK = {
         'accounts.permissions.IsAuthenticatedWithValidToken',
     ),
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
-    'UNAUTHENTICATED_USER': None,
+    'UNAUTHENTICATED_USER': 'django.contrib.auth.models.AnonymousUser',
 }
 
 # JWT Token Configuration
