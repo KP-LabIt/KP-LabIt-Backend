@@ -97,17 +97,21 @@ INSTALLED_APPS = [
     "api",
     "rest_framework",
     "corsheaders",
-    "accounts",
+    "accounts.apps.AccountsConfig",
     "djoser",
+    "django.contrib.sites",
     "anymail",
 ]
 
+SITE_ID = 1
+
 DJOSER = {
     "LOGIN_FIELD": "email",
-    "PASSWORD_RESET_CONFIRM_URL": "reset_password/{uid}/{token}",  
+    "PASSWORD_RESET_CONFIRM_URL": "reset-password-confirm/?uid={uid}&token={token}",
     "SEND_ACTIVATION_EMAIL": False,
     "PASSWORD_RESET_CONFIRM_RETYPE": False,
-    "PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND": True
+    "PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND": True,
+    "DOMAIN": os.getenv("FRONTEND_DOMAIN", "localhost:5173"),
 }
 
 
