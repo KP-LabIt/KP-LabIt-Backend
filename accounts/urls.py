@@ -1,10 +1,11 @@
 from django.urls import path
-from .views import get_init, login, change_password, CustomUserViewSet
+from .views import get_init, login, change_password, refresh_token, CustomUserViewSet
 from djoser.views import UserViewSet
 
 urlpatterns = [
     path("", get_init, name="get_init"),
     path("login/", login, name="login"),
+    path("refresh_token/", refresh_token, name="refresh_token"),
     path("change_password/", change_password, name="change_password"),
     # tieto 2 endpointy dole su importnute z djoser knižnice takže logiku netreba riešiť. POZOR, TIETO ENDPOINTY NIE SÚ EŠTE PREPOJENÉ S FRONTENDOM. TREBA DOPLNIŤ..
     # Do frontendu treba pridať nejaký text v login page že "Zabudli ste heslo?", a ten text ťa presmeruje na page ktory je dostupny pre kazdeho, nie je protected.

@@ -17,8 +17,9 @@ const res = await fetch('/api/accounts/login/', {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'user@katkinpark.sk', password: 'pass' })
 });
-const { token } = await res.json();
+const { token, refresh_token } = await res.json();
 localStorage.setItem('token', token);
+localStorage.setItem('refresh_token', refresh_token);
 ```
 
 ### 2. Použiť token
@@ -26,6 +27,18 @@ localStorage.setItem('token', token);
 fetch('/api/endpoint/', {
     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
 });
+```
+
+### 3. Refresh token (keď access token expiruje)
+```javascript
+const res = await fetch('/api/accounts/refresh_token/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: localStorage.getItem('refresh_token') })
+});
+const { token, refresh_token } = await res.json();
+localStorage.setItem('token', token);
+localStorage.setItem('refresh_token', refresh_token);
 ```
 
 ## Permission Classes
@@ -64,24 +77,60 @@ api.interceptors.request.use(config => {
     return config;
 });
 
-// Auto-logout pri 401
+// Auto-refresh pri 401
 api.interceptors.response.use(
     response => response,
-    error => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
+    async error => {
+        const originalRequest = error.config;
+        
+        // Ak je 401 a nie je to už retry
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            
+            try {
+                // Pokus o refresh token
+                const refreshToken = localStorage.getItem('refresh_token');
+                const res = await axios.post('/api/accounts/refresh_token/', {
+                    refresh_token: refreshToken
+                });
+                
+                const { token, refresh_token } = res.data;
+                localStorage.setItem('token', token);
+                localStorage.setItem('refresh_token', refresh_token);
+                
+                // Opakuj pôvodný request s novým tokenom
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                return axios(originalRequest);
+            } catch (refreshError) {
+                // Refresh zlyhal → logout
+                localStorage.removeItem('token');
+                localStorage.removeItem('refresh_token');
+                window.location.href = '/login';
+                return Promise.reject(refreshError);
+            }
         }
+        
         return Promise.reject(error);
     }
 );
 ```
 
+## API Endpointy
+
+### POST /api/accounts/refresh_token/
+**Payload:** `{"refresh_token": "..."}`  
+**Response:** `{"token": "...", "refresh_token": "...", "user": {...}}`  
+**Errors:** 
+- 400 `missing_refresh_token` - Refresh token nebol poskytnutý
+- 401 `invalid_refresh_token` - Neplatný alebo expirovaný refresh token
+- 404 `user_not_found` - User z tokenu neexistuje
+
 ## Error kódy
 
 | Status | Kód | Akcia |
 |--------|-----|-------|
-| 401 | `no_token` / `token_expired` / `invalid_token` | Presmerovať na login |
+| 401 | `no_token` / `token_expired` / `invalid_token` | Skúsiť refresh token |
+| 401 | `invalid_refresh_token` | Presmerovať na login |
 | 403 | `not_student` / `not_teacher` / `not_admin` | Zobraziť chybu |
 
 ## Príklady endpointov

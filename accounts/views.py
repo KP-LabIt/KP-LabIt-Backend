@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import User, Role
 from .serializer import UserSerializer, RoleSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from rest_framework.permissions import AllowAny
 from .permissions import IsAuthenticatedWithValidToken
@@ -145,6 +145,83 @@ class CustomUserViewSet(UserViewSet):
         #    settings.EMAIL.password_changed_confirmation(self.request, context).send(to)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])  # Public endpoint - does not require access token
+def refresh_token(request):
+    """
+    Refresh access token endpoint.
+    Takes refresh_token and returns new access_token.
+    Does NOT require access token - only valid refresh token.
+    """
+    refresh_token_str = request.data.get("refresh_token")
+    
+    if not refresh_token_str:
+        return Response({
+            "detail": "Refresh token required.",
+            "code": "missing_refresh_token"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Validate refresh token
+        refresh = RefreshToken(refresh_token_str)
+        
+        # Get user from token
+        user_id = refresh.get('user_id')
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                "detail": "User not found.",
+                "code": "user_not_found"
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get user role
+        if user.role:
+            role = user.role.name
+        else:
+            role = "student"
+        
+        # Create new access token with user information
+        payload = {
+            "firstName": user.first_name,
+            "lastName": user.last_name,
+            "role": role,
+            "email": user.email,
+            "username": user.username
+        }
+        
+        # Generate new refresh token (optional - can reuse old one)
+        new_refresh = RefreshToken.for_user(user)
+        for k, v in payload.items():
+            new_refresh[k] = v
+        
+        new_access_token = str(new_refresh.access_token)
+        new_refresh_token = str(new_refresh)
+        
+        return Response({
+            "token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "firstName": user.first_name,
+                "lastName": user.last_name,
+                "role": role
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except TokenError as e:
+        return Response({
+            "detail": "Invalid or expired refresh token.",
+            "code": "invalid_refresh_token"
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    except Exception as e:
+        return Response({
+            "detail": "Token refresh failed.",
+            "code": "refresh_failed"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
