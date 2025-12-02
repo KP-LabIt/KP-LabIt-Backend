@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "accounts",
     "djoser",
+    "anymail",
 ]
 
 DJOSER = {
@@ -110,9 +111,15 @@ DJOSER = {
 }
 
 
-# ZATIAL IBA NA TESTOVANIE, MAILY SA POSIELAJU DO KONZOLY, POTOM PRIDAŤ POSIELANIE MAILOV CEZ MAILGUN
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "noreply@example.com"
+# Mailgun Email Configuration
+EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+DEFAULT_FROM_EMAIL = os.getenv("MAILGUN_FROM_EMAIL", "KP | GearHub <postmaster@mail.simonszi.me>")
+
+ANYMAIL = {
+    "MAILGUN_API_KEY": os.getenv("MAILGUN_API_KEY"),
+    "MAILGUN_SENDER_DOMAIN": os.getenv("MAILGUN_DOMAIN", "mail.simonszi.me"),
+    "MAILGUN_API_URL": "https://api.eu.mailgun.net/v3",  # EU region
+}
 
 
 

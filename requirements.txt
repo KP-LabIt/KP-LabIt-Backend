@@ -7,3 +7,4 @@ djangorestframework-simplejwt
 Pillow
 django-environ
 djoser
+django-anymail[mailgun]

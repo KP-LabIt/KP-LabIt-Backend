@@ -1,0 +1,27 @@
+Watching for file changes with StatReloader
+Not Found: /api/accounts/users/reset_password/
+[02/Dec/2025 08:53:44] "POST /api/accounts/users/reset_password/ HTTP/1.1" 404 3928
+[02/Dec/2025 08:53:59] "POST /api/accounts/reset_password/ HTTP/1.1" 204 0
+/Users/dankouu/repos/Lab IT/KP-Labit-Backend/KP-LabIt-Backend/app/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+December 02, 2025 - 08:53:28
+Django version 5.2.8, using settings 'app.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[02/Dec/2025 09:01:37] "POST /api/accounts/reset_password/ HTTP/1.1" 204 0
+Bad Request: /api/accounts/reset_password/
+[02/Dec/2025 09:01:56] "POST /api/accounts/reset_password/ HTTP/1.1" 400 41
+Not Found: /reset_password/Mjk/d06eeo-75ae2c59b6ef923e93dd9519642617a6
+[02/Dec/2025 09:03:31] "GET /reset_password/Mjk/d06eeo-75ae2c59b6ef923e93dd9519642617a6 HTTP/1.1" 404 2649
+Not Found: /favicon.ico
+Not Found: /apple-touch-icon-precomposed.png
+[02/Dec/2025 09:03:31] "GET /favicon.ico HTTP/1.1" 404 2508
+[02/Dec/2025 09:03:31] "GET /apple-touch-icon-precomposed.png HTTP/1.1" 404 2571
+Not Found: /apple-touch-icon.png
+[02/Dec/2025 09:03:31] "GET /apple-touch-icon.png HTTP/1.1" 404 2535
