@@ -245,12 +245,7 @@ def get_init(request):
         }
     })
 
-
-
-# ========================================
 # Microsoft Authentication Views
-# ========================================
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def microsoft_login(request):
@@ -285,10 +280,10 @@ def auth_success(request):
     GET /api/accounts/auth/success/
     
     This endpoint is called after successful Microsoft authentication.
-    It generates JWT tokens and returns user information.
+    It generates JWT tokens and redirects to frontend with tokens.
     
     Returns:
-        JSON response with user info and JWT tokens
+        Redirect to frontend with JWT tokens in URL parameters
     """
     try:
         if request.user.is_authenticated:
@@ -297,36 +292,21 @@ def auth_success(request):
             # Generate JWT token for the authenticated user
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
-            refresh_token = str(refresh)
+            refresh_token_str = str(refresh)
             
             logger.info(f"Microsoft authentication successful for user: {user.email if hasattr(user, 'email') else user.username}")
             
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Successfully authenticated with Microsoft',
-                'user': {
-                    'id': user.id,
-                    'email': getattr(user, 'email', ''),
-                    'username': user.username,
-                    'first_name': getattr(user, 'first_name', ''),
-                    'last_name': getattr(user, 'last_name', ''),
-                },
-                'token': access_token,
-                'refresh_token': refresh_token,
-            }, status=200)
+            # Redirect to frontend with tokens
+            frontend_url = f"http://localhost:5173/auth/callback?token={access_token}&refresh_token={refresh_token_str}"
+            return redirect(frontend_url)
         else:
             logger.warning("Authentication failed - user not authenticated")
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Authentication failed',
-                'detail': 'Could not authenticate with Microsoft'
-            }, status=401)
+            # Redirect to frontend with error
+            return redirect('http://localhost:5173/login?error=authentication_failed')
     except Exception as e:
         logger.error(f"Auth success error: {str(e)}")
-        return JsonResponse({
-            'error': 'Authentication processing failed',
-            'detail': str(e)
-        }, status=500)
+        # Redirect to frontend with error
+        return redirect(f'http://localhost:5173/login?error=processing_failed&detail={str(e)}')
 
 
 @api_view(['GET'])
