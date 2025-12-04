@@ -8,3 +8,5 @@ Pillow
 django-environ
 djoser
 django-anymail[mailgun]
+social-auth-app-django
+requests

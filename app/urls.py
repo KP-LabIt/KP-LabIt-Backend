@@ -21,5 +21,6 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include("api.urls")),
-    path("api/accounts/", include("accounts.urls"))
+    path("api/accounts/", include("accounts.urls")),
+    path("", include("social_django.urls", namespace="social")),  # Social auth URLs (Microsoft OAuth2)
 ]

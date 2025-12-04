@@ -1,5 +1,8 @@
 from django.urls import path
-from .views import get_init, login, change_password, refresh_token, CustomUserViewSet
+from .views import (
+    get_init, login, change_password, refresh_token, CustomUserViewSet,
+    microsoft_login, auth_success, get_microsoft_users, get_microsoft_user_by_id
+)
 from djoser.views import UserViewSet
 
 urlpatterns = [
@@ -16,4 +19,12 @@ urlpatterns = [
     # Cielom tohto je, aby si mohli studenti zmenit heslo, lebo teraz tam maju v podstate placeholder heslo, a aby sa neposielal kazdemu mail s jeho heslom, tak staci, aby si klikol na ten odkaz, vyplnil jeho mail, na maile sa mu to otvori, zmeni heslo a hotovo. ked bude prihlaseny, tak si kludne vie stale zmenit heslo v jeho profile.
     path("reset_password/", UserViewSet.as_view({"post": "reset_password"}), name="reset_password"),
     path("reset_password_confirm/", CustomUserViewSet.as_view({"post": "reset_password_confirm"}), name="reset_password_confirm"),
+    
+    # Microsoft OAuth2 Authentication
+    path("microsoft/login/", microsoft_login, name="microsoft_login"),
+    path("auth/success/", auth_success, name="auth_success"),
+    
+    # Microsoft Graph API - Users
+    path("microsoft/users/", get_microsoft_users, name="microsoft_users"),
+    path("microsoft/users/<str:user_id>/", get_microsoft_user_by_id, name="microsoft_user_by_id"),
 ]

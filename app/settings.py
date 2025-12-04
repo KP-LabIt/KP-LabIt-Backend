@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     "djoser",
     "django.contrib.sites",
     "anymail",
+    "social_django",  # Microsoft OAuth2
 ]
 
 SITE_ID = 1
@@ -135,7 +136,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "corsheaders.middleware.CorsMiddleware"
+    "corsheaders.middleware.CorsMiddleware",
+    "social_django.middleware.SocialAuthExceptionMiddleware",  # Microsoft OAuth2
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -230,3 +232,63 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # v production potom treba zmenit lebo kazda url moze posielat requesty a mozu sa leaknut data
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+# ========================================
+# Microsoft OAuth2 Configuration
+# ========================================
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.microsoft.MicrosoftOAuth2',  # Microsoft OAuth2
+    'django.contrib.auth.backends.ModelBackend',  # Default Django auth
+)
+
+# Microsoft OAuth2 Settings
+SOCIAL_AUTH_MICROSOFT_OAUTH2_KEY = os.getenv("MICROSOFT_AUTH_CLIENT_ID", "")
+SOCIAL_AUTH_MICROSOFT_OAUTH2_SECRET = os.getenv("MICROSOFT_AUTH_CLIENT_SECRET", "")
+SOCIAL_AUTH_MICROSOFT_OAUTH2_TENANT_ID = os.getenv("MICROSOFT_AUTH_TENANT_ID", "common")
+
+# Redirect URI - social-auth uses /complete/{backend-name}/
+# No need to set REDIRECT_URI manually, it's auto-generated
+
+# Scopes for Microsoft OAuth2
+SOCIAL_AUTH_MICROSOFT_OAUTH2_SCOPE = [
+    'openid',
+    'email',
+    'profile',
+]
+
+# Pipeline for user creation/authentication
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+)
+
+# Store tokens in session
+SOCIAL_AUTH_MICROSOFT_OAUTH2_EXTRA_DATA = [
+    ('refresh_token', 'refresh_token'),
+    ('access_token', 'access_token'),
+    ('expires_in', 'expires_in'),
+]
+
+# URL settings for social-auth
+LOGIN_URL = '/api/accounts/microsoft/login/'
+LOGIN_REDIRECT_URL = '/api/accounts/auth/success/'  # Redirect after successful login
+LOGOUT_REDIRECT_URL = '/'
+
+
+# ========================================
+# Microsoft Graph API Configuration
+# ========================================
+# For Client Credentials flow (app-only access)
+MS_GRAPH_TENANT_ID = os.getenv("TENANT_ID", "")
+MS_GRAPH_CLIENT_ID = os.getenv("CLIENT_ID", "")
+MS_GRAPH_CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
+MS_GRAPH_SCOPE = os.getenv("GRAPH_SCOPE", "https://graph.microsoft.com/.default")
+MS_GRAPH_ENDPOINT_USERS = os.getenv("GRAPH_ENDPOINT_USERS", "https://graph.microsoft.com/v1.0/users")

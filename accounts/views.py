@@ -1,15 +1,20 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, Role
-from .serializer import UserSerializer, RoleSerializer
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
-from rest_framework.permissions import AllowAny
-from .permissions import IsAuthenticatedWithValidToken
-from djoser.views import UserViewSet
-from rest_framework.decorators import action
+from django.shortcuts import redirect
+from django.http import JsonResponse
 from django.utils.timezone import now
+from djoser.views import UserViewSet
+from .models import User, Role
+from .serializer import UserSerializer, RoleSerializer
+from .permissions import IsAuthenticatedWithValidToken
+from .ms_graph import MicrosoftGraphClient
+import logging
+
+logger = logging.getLogger(__name__)
 
 # view pre veci ohladne usera/accounts
 @api_view(["POST"])
@@ -239,3 +244,186 @@ def get_init(request):
             "role": request.user.role.name if request.user.role else None
         }
     })
+
+
+
+# ========================================
+# Microsoft Authentication Views
+# ========================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def microsoft_login(request):
+    """
+    Initiate Microsoft OAuth2 login.
+    
+    GET /api/accounts/microsoft/login/
+    
+    This endpoint redirects the user to social-auth's login URL which handles
+    the OAuth2 flow automatically.
+    
+    Returns:
+        Redirect to social-auth Microsoft OAuth2 login
+    """
+    try:
+        logger.info("Redirecting to Microsoft OAuth2 login")
+        return redirect('/login/microsoft-oauth2/')
+    except Exception as e:
+        logger.error(f"Microsoft login failed: {str(e)}")
+        return JsonResponse({
+            'error': 'Failed to initiate Microsoft login',
+            'detail': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def auth_success(request):
+    """
+    Success endpoint after Microsoft OAuth2 authentication.
+    
+    GET /api/accounts/auth/success/
+    
+    This endpoint is called after successful Microsoft authentication.
+    It generates JWT tokens and returns user information.
+    
+    Returns:
+        JSON response with user info and JWT tokens
+    """
+    try:
+        if request.user.is_authenticated:
+            user = request.user
+            
+            # Generate JWT token for the authenticated user
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+            
+            logger.info(f"Microsoft authentication successful for user: {user.email if hasattr(user, 'email') else user.username}")
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Successfully authenticated with Microsoft',
+                'user': {
+                    'id': user.id,
+                    'email': getattr(user, 'email', ''),
+                    'username': user.username,
+                    'first_name': getattr(user, 'first_name', ''),
+                    'last_name': getattr(user, 'last_name', ''),
+                },
+                'token': access_token,
+                'refresh_token': refresh_token,
+            }, status=200)
+        else:
+            logger.warning("Authentication failed - user not authenticated")
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Authentication failed',
+                'detail': 'Could not authenticate with Microsoft'
+            }, status=401)
+    except Exception as e:
+        logger.error(f"Auth success error: {str(e)}")
+        return JsonResponse({
+            'error': 'Authentication processing failed',
+            'detail': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_microsoft_users(request):
+    """
+    Fetch users from Microsoft Graph API.
+    
+    GET /api/accounts/microsoft/users/
+    
+    This endpoint uses Client Credentials flow (app-only access) to fetch
+    users from Microsoft Graph API.
+    
+    Query Parameters:
+        top (int, optional): Limit number of users (e.g., ?top=10)
+        select (str, optional): Comma-separated list of properties 
+                               (e.g., ?select=displayName,mail,id)
+    
+    Returns:
+        JSON response with list of users from Microsoft Graph
+    """
+    try:
+        graph_client = MicrosoftGraphClient()
+        
+        # Get query parameters
+        top = request.GET.get('top')
+        select = request.GET.get('select')
+        
+        # Parse parameters
+        top_int = int(top) if top and top.isdigit() else None
+        select_list = select.split(',') if select else None
+        
+        # Fetch users from Microsoft Graph
+        users_data = graph_client.get_users(top=top_int, select=select_list)
+        users = users_data.get('value', [])
+        
+        logger.info(f"Successfully fetched {len(users)} users from Microsoft Graph API")
+        
+        return JsonResponse({
+            'status': 'success',
+            'count': len(users),
+            'users': users,
+            'odata_context': users_data.get('@odata.context'),
+            'next_link': users_data.get('@odata.nextLink'),
+        }, status=200)
+    except ValueError as e:
+        logger.error(f"Configuration error: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'error': 'Configuration error',
+            'detail': str(e),
+            'help': 'Please ensure TENANT_ID, CLIENT_ID, and CLIENT_SECRET are set in .env file'
+        }, status=500)
+    except Exception as e:
+        logger.error(f"Failed to fetch Microsoft users: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'error': 'Failed to fetch users from Microsoft Graph',
+            'detail': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_microsoft_user_by_id(request, user_id):
+    """
+    Fetch a specific user by ID from Microsoft Graph API.
+    
+    GET /api/accounts/microsoft/users/<user_id>/
+    
+    Args:
+        user_id (str): Microsoft user ID or userPrincipalName
+    
+    Query Parameters:
+        select (str, optional): Comma-separated list of properties
+    
+    Returns:
+        JSON response with user details
+    """
+    try:
+        graph_client = MicrosoftGraphClient()
+        
+        select = request.GET.get('select')
+        select_list = select.split(',') if select else None
+        
+        user_data = graph_client.get_user_by_id(user_id, select=select_list)
+        
+        logger.info(f"Successfully fetched user: {user_id}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'user': user_data
+        }, status=200)
+    except Exception as e:
+        logger.error(f"Failed to fetch user {user_id}: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'error': 'Failed to fetch user from Microsoft Graph',
+            'detail': str(e)
+        }, status=500)
