@@ -59,6 +59,8 @@ def get_user_reservations(request):
         
     return Response(serializer.data)
 
+
+#tento endpoint zmaze rezervaciu pre aktualne prihlaseneho usera
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticatedWithValidToken])
 def delete_reservation(request, reservation_id):
