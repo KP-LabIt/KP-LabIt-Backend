@@ -20,7 +20,7 @@ class Activity(models.Model):
 
 class ActivitySlot(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, help_text="Učiteľ priradený k slotu (hlavne kvoli" \
+    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, help_text="Učiteľ priradený k slotu (hlavne kvoli" \
     " konzultaciam, môže byť null).")
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
@@ -37,9 +37,9 @@ class Reservation(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     activity_slot = models.ForeignKey(ActivitySlot, on_delete=models.CASCADE)
-    note = models.TextField(null=True)
+    note = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=30, choices=Status.choices)
+    status = models.CharField(max_length=30, choices=Status.choices, null=True, blank=True)
 
     def __str__(self):
         return self.user.username

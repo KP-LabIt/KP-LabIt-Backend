@@ -35,3 +35,39 @@ def get_init(request):
         }
     })
 
+
+# tento endpoint vrati vsetky rezervacie pre aktualne prihlaseneho usera
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedWithValidToken])
+def get_user_reservations(request):
+    
+    user = request.user
+    reservations = Reservation.objects.filter(user=user)
+
+    serializer = ReservationSerializer(reservations, many=True)
+
+    # doplnenie user dat do kazdej rezervacie, lebo serializer to sam neobsahuje
+    for data in serializer.data:
+        data["user"] = {
+            "id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": user.role.name if user.role else None
+        }
+
+        
+    return Response(serializer.data)
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticatedWithValidToken])
+def delete_reservation(request, reservation_id):
+    user = request.user
+
+    try:
+        reservation = Reservation.objects.get(id=reservation_id, user=user)
+    except Reservation.DoesNotExist:
+        return Response({"error": "Rezervácia neexistuje alebo nemáte oprávnenie ju zmazať."}, status=status.HTTP_404_NOT_FOUND)
+
+    reservation.delete()
+    return Response({"detail": "Rezervácia bola úspešne zmazaná."}, status=status.HTTP_200_OK)
