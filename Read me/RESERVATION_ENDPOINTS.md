@@ -1,12 +1,34 @@
-Tento dokument popisuje endpointy pre prácu s rezerváciami používateľa.
+# API Dokumentácia - Rezervácie
+
+Tento dokument popisuje endpointy pre prácu s rezerváciami používateľa. Rozlišuje sa správanie pre **študentov** a **učiteľov**.
 
 ---
 
-## 1. GET `/api/reservations/`
+## Endpointy
 
-- Účel: Získa všetky rezervácie pre aktuálne prihláseného používateľa.
-- Permissions: Vyžaduje autentifikáciu (`IsAuthenticatedWithValidToken`).
-- Response JSON obsahuje pole objektov, kde každý objekt má nasledovnú štruktúru:
+### 1. GET `/api/reservations/`
+
+Získanie zoznamu rezervácií pre prihláseného používateľa.
+
+#### Správanie podľa role:
+
+- **Študent**: Získa všetky svoje budúce rezervácie (aktivita ešte neprebehla)
+- **Učiteľ**: Získa všetky budúce rezervácie, kde je priradený k aktivite slotu
+
+#### Autentifikácia:
+
+- **Požadovaná**: Áno
+- **Permissions**: `IsAuthenticatedWithValidToken`
+
+#### Filtrovanie:
+
+Vrátia sa iba rezervácie, kde `activity_slot.end_date >= now` (ešte neprebehli)
+
+#### Response:
+
+**Status**: `200 OK`
+
+**Body** (JSON Array):
 
 ```json
 [
@@ -36,7 +58,7 @@ Tento dokument popisuje endpointy pre prácu s rezerváciami používateľa.
       },
       "teacher": null
     },
-    "note": "tfutfuuzfuz",
+    "note": "Poznámka k rezervácii",
     "created_at": "2025-12-22T19:19:46.102249Z",
     "status": null,
     "status_label": null
@@ -44,18 +66,97 @@ Tento dokument popisuje endpointy pre prácu s rezerváciami používateľa.
 ]
 ```
 
-- Poznámka: Tento endpoint iba číta dáta, **nekontroluje kapacitu ani duplikáty**.
+#### Poznámka:
+
+Tento endpoint iba číta dáta, nekontroluje kapacitu ani duplikáty.
 
 ---
 
-## 2. DELETE `/api/reservations/delete/<reservation_id>/`
+### 2. PATCH `/api/reservations/change_status/<reservation_id>/`
 
-- Účel: Vymaže konkrétnu rezerváciu používateľa.
-- Permissions: Vyžaduje autentifikáciu (`IsAuthenticatedWithValidToken`).
-- Overenie:
-  - Rezervácia musí patriť aktuálnemu používateľovi.
-- Request: `DELETE /api/reservations/delete/5/` (kde `5` je ID rezervácie)
-- Response JSON pri úspechu:
+Zmena statusu rezervácie učiteľom.
+
+#### Účel:
+
+Umožní učiteľovi, ktorý je priradený k danému slotu, zmeniť status rezervácie.
+
+#### Autentifikácia:
+
+- **Požadovaná**: Áno
+- **Permissions**: `IsTeacher`
+
+#### URL Parameters:
+
+- `reservation_id` (integer) - ID rezervácie
+
+#### Request Body:
+
+```json
+{
+  "status": "approved"
+}
+```
+
+**Validné statusy:**
+
+- `"pending"`
+- `"cancelled"`
+- `"approved"`
+
+#### Response:
+
+**Status**: `200 OK`
+
+**Body**:
+
+```json
+{
+  "detail": "Status rezervácie bol úspešne zmenený."
+}
+```
+
+#### Chybové odpovede:
+
+**Status**: `404 Not Found`
+
+```json
+{
+  "detail": "Rezervácia neexistuje alebo učiteľ nemá oprávnenie."
+}
+```
+
+**Status**: `400 Bad Request`
+
+```json
+{
+  "detail": "Neplatný status."
+}
+```
+
+---
+
+### 3. DELETE `/api/reservations/delete/<reservation_id>/`
+
+Vymazanie konkrétnej rezervácie.
+
+#### Účel:
+
+Vymaže konkrétnu rezerváciu pre aktuálne prihláseného používateľa.
+
+#### Autentifikácia:
+
+- **Požadovaná**: Áno
+- **Permissions**: `IsAuthenticatedWithValidToken`
+
+#### URL Parameters:
+
+- `reservation_id` (integer) - ID rezervácie na zmazanie
+
+#### Response:
+
+**Status**: `200 OK`
+
+**Body**:
 
 ```json
 {
@@ -63,4 +164,74 @@ Tento dokument popisuje endpointy pre prácu s rezerváciami používateľa.
 }
 ```
 
-- Ak rezervácia neexistuje alebo patrí inému používateľovi → 404 Not Found
+#### Chybové odpovede:
+
+**Status**: `404 Not Found`
+
+```json
+{
+  "detail": "Rezervácia neexistuje alebo patrí inému používateľovi."
+}
+```
+
+---
+
+## Príklady použitia
+
+### Študent
+
+#### Získať všetky svoje rezervácie:
+
+```http
+GET /api/reservations/
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Vymazať svoju rezerváciu:
+
+```http
+DELETE /api/reservations/delete/5/
+Authorization: Bearer <JWT_TOKEN>
+```
+
+---
+
+### Učiteľ
+
+#### Získať všetky rezervácie pre svoje activity sloty:
+
+```http
+GET /api/reservations/
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Zmeniť status rezervácie:
+
+```http
+PATCH /api/reservations/change_status/10/
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+```
+
+---
+
+## Dôležité poznámky
+
+1. **Študent** vidí iba svoje budúce rezervácie
+2. **Učiteľ** vidí iba rezervácie, ktoré patria k jeho `activity_slot`om a ktoré ešte neprebehli
+3. Backend zabezpečuje validáciu a oprávnenia, takže neoprávnené prístupy nie sú možné, aj keď sa frontendové údaje zmenia manuálne
+4. Všetky časové údaje sú v UTC formáte (ISO 8601)
+5. JWT token je potrebné posielať v hlavičke `Authorization` ako `Bearer <token>`
+
+---
+
+## Bezpečnosť
+
+- Všetky endpointy vyžadujú platnú JWT autentifikáciu
+- Kontrola oprávnení sa vykonáva na úrovni backendu
+- Študenti nemôžu pristupovať k rezerváciám iných študentov
+- Učitelia môžu meniť status iba pre rezervácie svojich activity slotov
