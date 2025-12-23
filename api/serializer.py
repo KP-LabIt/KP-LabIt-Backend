@@ -19,11 +19,42 @@ class ActivitySlotSerializer(serializers.ModelSerializer):
 class ReservationSerializer(serializers.ModelSerializer):
     status_label = serializers.SerializerMethodField()
     activity_slot = ActivitySlotSerializer()
+    user = serializers.SerializerMethodField()
 
     class Meta:
         model = Reservation
-        fields = ["id", "user", "activity_slot", "note", "created_at", "status", "status_label"]
+        fields = [
+            "id",
+            "user",
+            "activity_slot",
+            "note",
+            "created_at",
+            "status",
+            "status_label",
+        ]
         read_only_fields = ["id", "created_at"]
 
     def get_status_label(self, obj):
         return obj.get_status_display()
+
+    def get_user(self, obj):
+        request = self.context.get("request")
+        requester = request.user if request else None
+
+        # ak request poslal učiteľ, zobraz študenta
+        if requester and requester.role and requester.role.name == "teacher":
+            target_user = obj.user
+        else:
+            target_user = requester
+
+        if not target_user:
+            return None
+
+        return {
+            "id": target_user.id,
+            "email": target_user.email,
+            "first_name": target_user.first_name,
+            "last_name": target_user.last_name,
+            "role": target_user.role.name if target_user.role else None,
+        }
+

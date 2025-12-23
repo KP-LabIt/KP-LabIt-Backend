@@ -16,7 +16,7 @@ class ActivitySlotAdmin(ModelAdmin):
     search_fields = ("activity__name", "teacher__username")
 class ReservationAdmin(ModelAdmin):
     model = Reservation
-    list_display = ("user", "activity_slot", "status", "created_at")
+    list_display = ("user", "activity_slot__activity", "status", "created_at", "activity_slot__start_date", "activity_slot__end_date")
     search_fields = ("user__username", "activity_slot__activity__name")
     list_filter = ("status", "activity_slot__activity")
 
