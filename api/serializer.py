@@ -11,9 +11,20 @@ class ActivitySerializer(serializers.ModelSerializer):
 
 class ActivitySlotSerializer(serializers.ModelSerializer):
     activity = ActivitySerializer()
+    teacher = serializers.SerializerMethodField()
     class Meta:
         model = ActivitySlot
         fields = ["id", "start_date", "end_date", "activity", "teacher"]
+
+    def get_teacher(self, obj):
+        teacher = obj.teacher
+        if not teacher:
+            return None
+        return {
+            "id": teacher.id,
+            "first_name": teacher.first_name,
+            "last_name": teacher.last_name,
+        }
 
 
 class ReservationSerializer(serializers.ModelSerializer):
