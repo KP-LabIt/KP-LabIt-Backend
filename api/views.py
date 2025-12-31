@@ -109,3 +109,64 @@ def delete_reservation(request, reservation_id):
 
     reservation.delete()
     return Response({"detail": "Rezervácia bola úspešne zmazaná."}, status=status.HTTP_200_OK)
+
+
+# tento endpoint vrati vsetky aktivity (studenti vidi len aktivity pre svoju rolu, ucitelia/admini vidi vsetky)
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedWithValidToken])
+def get_activities(request):
+    """
+    Vráti všetky aktivity.
+    Študenti vidia len aktivity pre svoju rolu, učitelia/admini vidia všetky aktivity.
+    """
+    user = request.user
+
+    if user.role and user.role.name in ["teacher", "admin"]:
+        # ucitelia a admini vidi vsetky aktivity
+        activities = Activity.objects.all()
+    else:
+        # studenti vidi len aktivity pre svoju rolu
+        activities = Activity.objects.filter(role=user.role)
+
+    serializer = ActivitySerializer(activities, many=True)
+    return Response(serializer.data)
+
+
+# tento endpoint vytvori novu aktivitu (len pre ucitelov a adminov)
+@api_view(["POST"])
+@permission_classes([IsTeacherOrAdmin])
+def create_activity(request):
+    """
+    Vytvorí novú aktivitu.
+    Vyžaduje rolu učiteľa alebo administrátora.
+    """
+    serializer = ActivitySerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "detail": "Aktivita bola úspešne vytvorená.",
+            "activity": serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# tento endpoint vrati vsetky aktivity (studenti vidi len aktivity pre svoju rolu, ucitelia/admini vidi vsetky)
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedWithValidToken])
+def get_activities(request):
+    """
+    Vráti všetky aktivity.
+    Študenti vidia len aktivity pre svoju rolu, učitelia/admini vidia všetky aktivity.
+    """
+    user = request.user
+
+    if user.role and user.role.name in ["teacher", "admin"]:
+        # ucitelia a admini vidi vsetky aktivity
+        activities = Activity.objects.all()
+    else:
+        # studenti vidi len aktivity pre svoju rolu
+        activities = Activity.objects.filter(role=user.role)
+
+    serializer = ActivitySerializer(activities, many=True)
+    return Response(serializer.data)
