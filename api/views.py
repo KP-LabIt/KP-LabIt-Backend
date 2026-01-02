@@ -170,3 +170,51 @@ def get_activities(request):
 
     serializer = ActivitySerializer(activities, many=True)
     return Response(serializer.data)
+
+# endpoint pre získanie aktivity slotov pre rezervation page
+def get_activity_slots(request, activity_id, start_date, end_date):
+    """
+    Vráti sloty pre konkrétnu aktivitu v zadanom časovom rozsahu.
+    Tento endpoint používa frontend pre rezervačnú stránku.
+
+    Logika:
+    1. Overí existenciu aktivity.
+    2. Vyfiltruje sloty prislúchajúce k danej aktivite a spadajúce do rozsahu start_date - end_date.
+    3. Serializuje dáta vrátane počtu rezervácií a informácie o naplnení kapacity.
+    """
+    try:
+        # Skúsime nájsť aktivitu podľa ID
+        activity = Activity.objects.get(id=activity_id)
+    except Activity.DoesNotExist:
+        return Response({"error": "Aktivita nebola nájdená."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Filtrovanie slotov podľa aktivity a dátumového rozsahu
+    # Používame __date pre porovnanie čistých dátumov z URL (YYYY-MM-DD)
+    slots = ActivitySlot.objects.filter(
+        activity=activity,
+        start_date__date__gte=start_date,
+        end_date__date__lte=end_date
+    ).select_related('activity')
+
+    # Serializácia základných údajov o aktivite (použijeme ActivitySerializer pre konzistentný formát)
+    activity_data = ActivitySerializer(activity).data
+
+    # Príprava výsledného zoznamu s vypočítanými poliami
+    result = []
+    for slot in slots:
+        # Spočítame všetky rezervácie pre tento slot, ktoré nie sú zrušené
+        reserved_count = slot.reservation_set.exclude(status=Reservation.Status.CANCELLED).count()
+
+        # Určíme, či je kapacita naplnená
+        is_full = reserved_count >= activity.capacity
+
+        result.append({
+            "slotId": slot.id,
+            "start_date": slot.start_date.isoformat(),
+            "end_date": slot.end_date.isoformat(),
+            "activity": activity_data,
+            "reservedCount": reserved_count,
+            "isFull": is_full
+        })
+
+    return Response(result)
