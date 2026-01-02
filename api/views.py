@@ -11,6 +11,7 @@ from accounts.permissions import (
     IsStudentOrTeacher
 )
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 
 # view pre vseobecne api veci ako aktivity, rezervacie atd(keby bol v tom chaos, tak sa vie popripadne spravit pre kazdu vec vlastna appka
@@ -172,6 +173,8 @@ def get_activities(request):
     return Response(serializer.data)
 
 # endpoint pre získanie aktivity slotov pre rezervation page
+@api_view(["GET"])
+@permission_classes([IsAuthenticatedWithValidToken])
 def get_activity_slots(request, activity_id, start_date, end_date):
     """
     Vráti sloty pre konkrétnu aktivitu v zadanom časovom rozsahu.
@@ -188,12 +191,23 @@ def get_activity_slots(request, activity_id, start_date, end_date):
     except Activity.DoesNotExist:
         return Response({"error": "Aktivita nebola nájdená."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Filtrovanie slotov podľa aktivity a dátumového rozsahu
-    # Používame __date pre porovnanie čistých dátumov z URL (YYYY-MM-DD)
+    # Parse datetime values from incoming params. Expected format: 2026-01-02T22:10:28+01:00
+    start_dt = parse_datetime(start_date)
+    end_dt = parse_datetime(end_date)
+    if start_dt is None or end_dt is None:
+        return Response({"error": "Neplatný formát dátumu a času."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Ensure timezone-aware datetimes
+    if timezone.is_naive(start_dt):
+        start_dt = timezone.make_aware(start_dt, timezone.get_current_timezone())
+    if timezone.is_naive(end_dt):
+        end_dt = timezone.make_aware(end_dt, timezone.get_current_timezone())
+
+    # Filtrovanie slotov podľa aktivity a časového rozsahu s presnosťou na čas
     slots = ActivitySlot.objects.filter(
         activity=activity,
-        start_date__date__gte=start_date,
-        end_date__date__lte=end_date
+        start_date__gte=start_dt,
+        end_date__lte=end_dt
     ).select_related('activity')
 
     # Serializácia základných údajov o aktivite (použijeme ActivitySerializer pre konzistentný formát)
