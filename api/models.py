@@ -13,6 +13,8 @@ class Activity(models.Model):
     room = models.CharField(max_length=20, help_text="Miestnosť alebo miesto konania aktivity.")
     role = models.ForeignKey(Role, on_delete=models.CASCADE, help_text="Rola, ktorá môže participovať na aktivite(napr ucitel nevidi" \
     " ps5 rezervaciu a student nevidi rezervaciu triedy).")
+    image_key = models.CharField(max_length=50, default="default", null=True, help_text="určuje akú fotku ma frontend použiť pre zobrazenie aktivity" \
+    " napr: 'playstation', 'gym', 'hall', 'lesson', 'book' alebo 'default' ")
 
     def __str__(self):
         return self.name
