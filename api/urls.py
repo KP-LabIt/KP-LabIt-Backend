@@ -6,7 +6,8 @@ from .views import (
     delete_reservation, 
     get_activities, 
     create_activity,
-    get_activity_slots
+    get_activity_slots,
+    create_activity_with_slots,
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path("reservations/delete/<int:reservation_id>/", delete_reservation, name="delete_reservation"),
     path("activities/", get_activities, name="get_activities"),
     path("activities/create/", create_activity, name="create_activity"),
+    path("activities/create-with-slots/", create_activity_with_slots, name="create_activity_with_slots"),
 ]

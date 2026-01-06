@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Activity, ActivitySlot, Reservation
-from .serializer import ActivitySerializer, ActivitySlotSerializer, ReservationSerializer
+from .serializer import ActivitySerializer, ActivitySlotSerializer, ReservationSerializer, ActivityWithSlotsSerializer
 from accounts.permissions import (
     IsAuthenticatedWithValidToken,
     IsStudent,
@@ -232,3 +232,22 @@ def get_activity_slots(request, activity_id, start_date, end_date):
         })
 
     return Response(result)
+
+# endpoint pre vytvorenie aktivity a prislusnymi aktivity slotmi naraz
+@api_view(["POST"])
+@permission_classes([IsTeacherOrAdmin])
+def create_activity_with_slots(request):
+
+    serializer = ActivityWithSlotsSerializer(
+        data=request.data,
+        context={"request": request}  # so serializer can access request.user
+    )
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            "detail": "Aktivita a Termíny, boli úspešne vytvorené!"},
+            status=status.HTTP_201_CREATED
+        )
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
