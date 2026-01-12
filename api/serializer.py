@@ -83,7 +83,8 @@ class ActivityWithSlotsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Activity
-        fields = ["name", "description", "capacity", "available_hours", "color", "category", "room", "role", "image_key", "activity_slots" ]
+        fields = ["name", "description", "capacity", "available_hours", "color", "category", "room", "role", "image_key", "created_by", "activity_slots" ]
+        read_only_fields = ["created_by"]
 
     def create(self, validated_data):
         slots_data = validated_data.pop("activity_slots")  # remove slots from main data
@@ -91,7 +92,10 @@ class ActivityWithSlotsSerializer(serializers.ModelSerializer):
         teacher = request.user  # teacher for all slots
 
         # Step 1: create the Activity
-        activity = Activity.objects.create(**validated_data)
+        activity = Activity.objects.create(
+            created_by=teacher,
+            **validated_data
+        )
 
         # Step 2: create all ActivitySlots linked to the Activity and teacher
         for slot_data in slots_data:

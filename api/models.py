@@ -1,6 +1,14 @@
 from django.db import models
 from accounts.models import Role
 from django.conf import settings
+from django.contrib.auth import get_user_model
+
+
+# funcia na ziskanie admina z tabulky users pre default 'created_by' v Activity modelu ľš
+def get_default_admin_user():
+    user = get_user_model()
+    admin = user.objects.filter(role__name="admin").order_by("id").first()
+    return admin.pk if admin else None
 
 
 class Activity(models.Model):
@@ -15,6 +23,8 @@ class Activity(models.Model):
     " ps5 rezervaciu a student nevidi rezervaciu triedy).")
     image_key = models.CharField(max_length=50, default="default", null=True, help_text="určuje akú fotku ma frontend použiť pre zobrazenie aktivity" \
     " napr: 'playstation', 'gym', 'hall', 'lesson', 'book' alebo 'default' ")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, default=get_default_admin_user,
+    help_text="Ucitel ktorý vytvoril aktivitu, (kôli filtrovanie pre 'moje aktivity') default je prvý pouzivatel v tabulke s role admin")
 
     def __str__(self):
         return self.name
