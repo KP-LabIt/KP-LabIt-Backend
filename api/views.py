@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Activity, ActivitySlot, Reservation
-from .serializer import ActivitySerializer, ActivitySlotSerializer, ReservationSerializer, ActivityWithSlotsSerializer
+from .serializer import ActivitySerializer, ActivitySlotSerializer, ReservationSerializer, ActivityWithSlotsSerializer, CreateReservationSerializer
 from accounts.permissions import (
     IsAuthenticatedWithValidToken,
     IsStudent,
@@ -110,6 +110,87 @@ def delete_reservation(request, reservation_id):
 
     reservation.delete()
     return Response({"detail": "Rezervácia bola úspešne zmazaná."}, status=status.HTTP_200_OK)
+
+
+# tento endpoint vytvori novu rezervaciu (len pre ucitelov a adminov)
+@api_view(["POST"])
+@permission_classes([IsTeacherOrAdmin])
+def create_reservation(request):
+    """
+    Vytvorí novú rezerváciu pre aktuálne prihláseného používateľa.
+    Vyžaduje rolu učiteľa alebo administrátora.
+    
+    Validácia:
+    1. Overí existenciu activity_slot
+    2. Overí, že slot je v budúcnosti
+    3. Overí, že kapacita nie je prekročená
+    4. Overí, že používateľ už nemá rezerváciu pre tento slot
+    5. Vytvorí rezerváciu so statusom PENDING
+    """
+    user = request.user
+    serializer = CreateReservationSerializer(data=request.data)
+    
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Serializer už validoval a načítal activity_slot objekt
+    activity_slot = serializer.validated_data.get('activity_slot')
+    note = serializer.validated_data.get('note', '')
+    
+    # Načítame activity s role pre validáciu (select_related pre optimalizáciu)
+    try:
+        activity_slot = ActivitySlot.objects.select_related('activity', 'activity__role').get(id=activity_slot.id)
+    except ActivitySlot.DoesNotExist:
+        return Response({"error": "Časový slot neexistuje."}, status=status.HTTP_404_NOT_FOUND)
+    
+    activity = activity_slot.activity
+    now = timezone.now()
+    
+    # Validácia 1: Overenie, že slot je v budúcnosti (ešte nezačal)
+    if activity_slot.start_date <= now:
+        return Response({
+            "error": "Nie je možné rezervovať slot, ktorý už začal alebo skončil."
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validácia 2: Overenie kapacity
+    # Počítame len rezervácie, ktoré nie sú zrušené
+    existing_reservations = Reservation.objects.filter(
+        activity_slot=activity_slot
+    ).exclude(status=Reservation.Status.CANCELLED)
+    
+    reserved_count = existing_reservations.count()
+    
+    if reserved_count >= activity.capacity:
+        return Response({
+            "error": f"Kapacita aktivity je naplnená ({reserved_count}/{activity.capacity})."
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validácia 3: Overenie, že používateľ už nemá rezerváciu pre tento slot
+    existing_user_reservation = Reservation.objects.filter(
+        user=user,
+        activity_slot=activity_slot
+    ).exclude(status=Reservation.Status.CANCELLED)
+    
+    if existing_user_reservation.exists():
+        return Response({
+            "error": "Už máte aktívnu rezerváciu pre tento časový slot."
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Vytvorenie rezervácie
+    reservation = Reservation.objects.create(
+        user=user,
+        activity_slot=activity_slot,
+        note=note,
+        status=Reservation.Status.PENDING
+    )
+    
+    # Serializácia výsledku pre odpoveď
+    result_serializer = ReservationSerializer(reservation, context={"request": request})
+    
+    return Response({
+        "detail": "Rezervácia bola úspešne vytvorená a čaká na schválenie.",
+        "reservation": result_serializer.data
+    }, status=status.HTTP_201_CREATED)
 
 
 # tento endpoint vrati vsetky aktivity (studenti vidi len aktivity pre svoju rolu, ucitelia/admini vidi vsetky)

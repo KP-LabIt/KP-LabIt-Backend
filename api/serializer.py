@@ -107,3 +107,13 @@ class ActivityWithSlotsSerializer(serializers.ModelSerializer):
 
         return activity
 
+
+# Serializer pre vytvorenie rezervácie
+class CreateReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reservation
+        fields = ["activity_slot", "note"]
+        extra_kwargs = {
+            "note": {"required": False, "allow_blank": True}
+        }
+
