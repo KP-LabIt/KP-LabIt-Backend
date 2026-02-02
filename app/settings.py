@@ -238,8 +238,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 # Microsoft OAuth2 Configuration
 # ========================================
 AUTHENTICATION_BACKENDS = (
+    'accounts.backends.EmailBackend',  # Login with email (Django admin + API)
     'social_core.backends.microsoft.MicrosoftOAuth2',  # Microsoft OAuth2
-    'django.contrib.auth.backends.ModelBackend',  # Default Django auth
+    'django.contrib.auth.backends.ModelBackend',  # Default Django auth (username)
 )
 
 # Microsoft OAuth2 Settings
