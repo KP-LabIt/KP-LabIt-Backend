@@ -22,7 +22,7 @@ class Activity(models.Model):
     role = models.ForeignKey(Role, on_delete=models.CASCADE, help_text="Rola, ktorá môže participovať na aktivite(napr ucitel nevidi" \
     " ps5 rezervaciu a student nevidi rezervaciu triedy).")
     image_key = models.CharField(max_length=50, default="default", null=True, help_text="určuje akú fotku ma frontend použiť pre zobrazenie aktivity" \
-    " napr: 'playstation', 'gym', 'hall', 'lesson', 'book' alebo 'default' ")
+    " napr: 'playstation', 'gym', 'hall', 'lesson', 'book', 'vr' alebo 'default' ")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, default=get_default_admin_user,
     help_text="Ucitel ktorý vytvoril aktivitu, (kôli filtrovanie pre 'moje aktivity') default je prvý pouzivatel v tabulke s role admin")
 
