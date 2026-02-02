@@ -112,20 +112,21 @@ def delete_reservation(request, reservation_id):
     return Response({"detail": "Rezervácia bola úspešne zmazaná."}, status=status.HTTP_200_OK)
 
 
-# tento endpoint vytvori novu rezervaciu (len pre ucitelov a adminov)
+# tento endpoint vytvori novu rezervaciu (studenti, ucitelia, admini)
 @api_view(["POST"])
-@permission_classes([IsTeacherOrAdmin])
+@permission_classes([IsAuthenticatedWithValidToken])
 def create_reservation(request):
     """
     Vytvorí novú rezerváciu pre aktuálne prihláseného používateľa.
-    Vyžaduje rolu učiteľa alebo administrátora.
+    Študenti môžu rezervovať len aktivity pre svoju rolu, učitelia/admini môžu rezervovať akúkoľvek aktivitu.
     
     Validácia:
     1. Overí existenciu activity_slot
     2. Overí, že slot je v budúcnosti
-    3. Overí, že kapacita nie je prekročená
-    4. Overí, že používateľ už nemá rezerváciu pre tento slot
-    5. Vytvorí rezerváciu so statusom PENDING
+    3. Overí role-based prístup (študenti len svoje aktivity)
+    4. Overí, že kapacita nie je prekročená
+    5. Overí, že používateľ už nemá rezerváciu pre tento slot
+    6. Vytvorí rezerváciu so statusom PENDING
     """
     user = request.user
     serializer = CreateReservationSerializer(data=request.data)
@@ -152,7 +153,14 @@ def create_reservation(request):
             "error": "Nie je možné rezervovať slot, ktorý už začal alebo skončil."
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validácia 2: Overenie kapacity
+    # Validácia 2: Overenie role-based prístupu (študenti len aktivity pre svoju rolu)
+    if user.role and user.role.name == "student":
+        if activity.role != user.role:
+            return Response({
+                "error": "Nemáte oprávnenie rezervovať túto aktivitu."
+            }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Validácia 3: Overenie kapacity
     # Počítame len rezervácie, ktoré nie sú zrušené
     existing_reservations = Reservation.objects.filter(
         activity_slot=activity_slot
@@ -165,7 +173,7 @@ def create_reservation(request):
             "error": f"Kapacita aktivity je naplnená ({reserved_count}/{activity.capacity})."
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validácia 3: Overenie, že používateľ už nemá rezerváciu pre tento slot
+    # Validácia 4: Overenie, že používateľ už nemá rezerváciu pre tento slot
     existing_user_reservation = Reservation.objects.filter(
         user=user,
         activity_slot=activity_slot
