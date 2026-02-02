@@ -9,6 +9,7 @@ from .views import (
     create_activity,
     get_activity_slots,
     create_activity_with_slots,
+    edit_activity
 )
 
 urlpatterns = [
@@ -21,4 +22,5 @@ urlpatterns = [
     path("activities/", get_activities, name="get_activities"),
     path("activities/create/", create_activity, name="create_activity"),
     path("activities/create-with-slots/", create_activity_with_slots, name="create_activity_with_slots"),
+    path("activities/edit/", edit_activity, name="edit_activity")
 ]

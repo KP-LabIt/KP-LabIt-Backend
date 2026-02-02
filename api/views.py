@@ -12,6 +12,7 @@ from accounts.permissions import (
 )
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.db import transaction
 
 
 # view pre vseobecne api veci ako aktivity, rezervacie atd(keby bol v tom chaos, tak sa vie popripadne spravit pre kazdu vec vlastna appka
@@ -340,3 +341,102 @@ def create_activity_with_slots(request):
         )
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#endpoint na upravu aktivity  vytvorenie dalsich activity slotov k nej
+@api_view(["POST"])
+@permission_classes([IsTeacherOrAdmin])
+def edit_activity(request):
+    """
+        Expects payload like:
+        {
+          "activity": { "id": 91, "name": "...", "capacity": 6, "room": "...", "role": "3", ... },
+          "activity_slots": [
+            { "activity": 91, "teacher": 428, "start_date": "...Z", "end_date": "...Z" }
+          ]
+        }
+
+        Behavior:
+        - Updates ONLY fields present in payload["activity"] (ignores "id")
+        - Creates ActivitySlot rows for each item in payload["activity_slots"] (if list is missing/empty -> creates none)
+        """
+    payload_activity = request.data.get("activity")
+    payload_slots = request.data.get("activity_slots", [])
+
+    if not isinstance(payload_activity, dict):
+        return Response({"error": "Missing or invalid 'activity' object."}, status=status.HTTP_400_BAD_REQUEST)
+
+    activity_id = payload_activity.get("id")
+    if not activity_id:
+        return Response({"error": "Missing 'activity.id'."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        activity = Activity.objects.get(id=activity_id)
+    except Activity.DoesNotExist:
+        return Response({"error": "Activity not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Only update fields that are present in payload_activity (ignore 'id')
+    allowed_fields = {
+        "name",
+        "description",
+        "capacity",
+        "available_hours",
+        "color",
+        "category",
+        "room",
+        "role",  # handled as role_id
+        "image_key",
+        "created_by",  # optional; will only apply if sent
+    }
+
+    with transaction.atomic():
+        for field, value in payload_activity.items():
+            if field == "id" or field not in allowed_fields:
+                continue
+
+            if field == "role":
+                # frontend can send role as "3" (string) -> store as FK id
+                if value in (None, ""):
+                    continue
+                activity.role_id = int(value)
+                continue
+
+            setattr(activity, field, value)
+
+        activity.save()
+
+        created_slots = []
+        if isinstance(payload_slots, list) and len(payload_slots) > 0:
+            for slot in payload_slots:
+                if not isinstance(slot, dict):
+                    continue
+
+                start_dt = parse_datetime(slot.get("start_date"))
+                end_dt = parse_datetime(slot.get("end_date"))
+                if start_dt is None or end_dt is None:
+                    return Response(
+                        {"error": "Invalid 'start_date' or 'end_date' datetime format."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                if timezone.is_naive(start_dt):
+                    start_dt = timezone.make_aware(start_dt, timezone.get_current_timezone())
+                if timezone.is_naive(end_dt):
+                    end_dt = timezone.make_aware(end_dt, timezone.get_current_timezone())
+
+                created_slots.append(
+                    ActivitySlot.objects.create(
+                        activity=activity,
+                        teacher_id=slot.get("teacher"),
+                        start_date=start_dt,
+                        end_date=end_dt,
+                    )
+                )
+
+    return Response(
+        {
+            "detail": "Activity updated successfully.",
+            "activity": ActivitySerializer(activity).data,
+            "created_slots_count": len(created_slots),
+        },
+        status=status.HTTP_200_OK
+    )
