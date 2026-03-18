@@ -50,3 +50,28 @@ Mac:
 ```bash
 python3 manage.py runserver
 ```
+
+## CI/CD (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): on every push/PR to `main`, `master`, or `develop` — install deps, `manage.py check`, `migrate` on SQLite, `test`.
+- **CD** (`.github/workflows/cd.yml`): on push to `main`/`master` or tag `v*` — build Docker image and push to **GitHub Container Registry** (`ghcr.io/<org>/<repo>`).
+
+**Run the container** (set real env vars):
+
+```bash
+docker run -p 8000:8000 \
+  -e SECRET_KEY_SETTINGS=... \
+  -e DATABASE_URL=postgresql://... \
+  ghcr.io/kp-labit/kp-labit-backend:latest
+```
+
+Then run migrations once (empty DB: use `--skip-checks` the first time):
+
+```bash
+docker run --rm -e SECRET_KEY_SETTINGS=... -e DATABASE_URL=... IMAGE \
+  python manage.py migrate --noinput --skip-checks
+```
+
+See `Read me/CI_CD_COMPATIBILITY.md` for details.
+
+Copy `.env.example` to `.env` locally; never commit `.env`.

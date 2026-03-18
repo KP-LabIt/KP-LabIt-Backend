@@ -171,11 +171,11 @@ if DATABASE_URL:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": result.path[1:],  
-            "USER": result.username,
-            "PASSWORD": result.password,
-            "HOST": result.hostname,
-            "PORT": result.port,
+            "NAME": result.path[1:] or "postgres",
+            "USER": result.username or "",
+            "PASSWORD": result.password or "",
+            "HOST": result.hostname or "",
+            "PORT": result.port or 5432,
         }
     }
 else:
